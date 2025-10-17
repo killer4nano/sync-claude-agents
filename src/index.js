@@ -183,11 +183,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   switch (command) {
     case 'start':
       await sync.start();
-      // Keep running
+      // Keep running - setInterval keeps process alive
       process.on('SIGINT', async () => {
         await sync.stop();
         process.exit(0);
       });
+      // Don't exit - let the intervals keep the process alive
+      await new Promise(() => {}); // Keep process alive forever
       break;
 
     case 'status':
