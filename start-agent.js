@@ -1,6 +1,8 @@
+import 'dotenv/config';
 import SyncWorkClaude from './src/index.js';
 
 console.log('Starting agent...');
+console.log(`Agent ID from .env: ${process.env.AGENT_ID || 'NOT SET - will default to agent-1'}`);
 
 const sync = new SyncWorkClaude();
 
