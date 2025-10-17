@@ -2,14 +2,25 @@ import fs from 'fs/promises';
 import path from 'path';
 
 export class LockManager {
-  constructor(projectRoot, agentId) {
+  constructor(projectRoot, agentId, syncEngine) {
     this.projectRoot = projectRoot;
     this.agentId = agentId;
+    this.syncEngine = syncEngine;
+    this.locksDir = path.join(projectRoot, '.sync-locks');
+  }
+
+  async initialize() {
+    // Create locks directory if it doesn't exist
+    try {
+      await fs.mkdir(this.locksDir, { recursive: true });
+    } catch (error) {
+      // Directory already exists, that's fine
+    }
   }
 
   getLockPath(filePath) {
-    const normalized = path.normalize(filePath).replace(/[/\\]/g, '_');
-    return path.join(this.projectRoot, `.sync-lock-${normalized}`);
+    const normalized = path.normalize(filePath).replace(/[/\\:]/g, '_');
+    return path.join(this.locksDir, `${normalized}.lock`);
   }
 
   async acquireLock(filePath, timeout = 30000) {
@@ -17,41 +28,68 @@ export class LockManager {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeout) {
+      // Pull latest lock state from git
+      if (this.syncEngine) {
+        await this.syncEngine.pull();
+      }
+
       try {
-        // Try to create lock file exclusively
+        // Check if lock already exists
+        try {
+          const lockData = await fs.readFile(lockPath, 'utf-8');
+          const lock = JSON.parse(lockData);
+          const lockAge = Date.now() - new Date(lock.acquiredAt).getTime();
+
+          // If lock is older than 5 minutes, consider it stale
+          if (lockAge > 5 * 60 * 1000) {
+            await fs.unlink(lockPath);
+          } else if (lock.agentId === this.agentId) {
+            // We already own this lock
+            return true;
+          } else {
+            // Lock owned by another agent, wait and retry
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+        } catch (error) {
+          // Lock doesn't exist or is corrupted, proceed to create
+        }
+
+        // Create lock file
         await fs.writeFile(lockPath, JSON.stringify({
           agentId: this.agentId,
           file: filePath,
           acquiredAt: new Date().toISOString()
-        }), { flag: 'wx' });
+        }));
 
-        return true;
-      } catch (error) {
-        if (error.code === 'EEXIST') {
-          // Lock exists, check if it's stale
-          try {
-            const lockData = await fs.readFile(lockPath, 'utf-8');
-            const lock = JSON.parse(lockData);
-            const lockAge = Date.now() - new Date(lock.acquiredAt).getTime();
+        // Commit and push lock to git
+        if (this.syncEngine) {
+          await this.syncEngine.push(`Acquired lock for ${filePath}`);
+        }
 
-            // If lock is older than 5 minutes, consider it stale and remove it
-            if (lockAge > 5 * 60 * 1000) {
-              await fs.unlink(lockPath);
-              continue;
-            }
-          } catch {
-            // Lock file is corrupted, remove it
-            try {
-              await fs.unlink(lockPath);
-            } catch {}
+        // Verify we still own the lock after sync
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (this.syncEngine) {
+          await this.syncEngine.pull();
+        }
+
+        try {
+          const lockData = await fs.readFile(lockPath, 'utf-8');
+          const lock = JSON.parse(lockData);
+
+          if (lock.agentId === this.agentId) {
+            return true;
+          } else {
+            // Another agent grabbed it, retry
             continue;
           }
-
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } else {
-          throw error;
+        } catch {
+          // Lock disappeared, retry
+          continue;
         }
+      } catch (error) {
+        console.error('Error acquiring lock:', error.message);
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
@@ -68,6 +106,12 @@ export class LockManager {
       // Only release if we own the lock
       if (lock.agentId === this.agentId) {
         await fs.unlink(lockPath);
+
+        // Commit and push lock release to git
+        if (this.syncEngine) {
+          await this.syncEngine.push(`Released lock for ${filePath}`);
+        }
+
         return true;
       } else {
         console.warn(`Cannot release lock for ${filePath}: owned by ${lock.agentId}`);

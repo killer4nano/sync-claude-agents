@@ -38,8 +38,19 @@ export class SyncEngine {
           return { success: true, commits: status.behind };
         } catch (error) {
           if (error.message.includes('CONFLICT')) {
-            console.error('Merge conflict detected');
-            return { success: false, error: 'conflict', message: error.message };
+            console.log('Merge conflict detected, attempting auto-resolution...');
+
+            // Auto-resolve conflicts in .sync-state.json by using remote version
+            try {
+              await this.git.checkout(['--theirs', '.sync-state.json']);
+              await this.git.add('.sync-state.json');
+              await this.git.commit('Resolved state file conflict (using remote)');
+              console.log('Auto-resolved state file conflict');
+              return { success: true, commits: status.behind, conflictResolved: true };
+            } catch (resolveError) {
+              console.error('Failed to auto-resolve conflict:', resolveError.message);
+              return { success: false, error: 'conflict', message: error.message };
+            }
           }
           throw error;
         }
@@ -55,6 +66,13 @@ export class SyncEngine {
 
   async push(message) {
     try {
+      // Pull first to avoid conflicts
+      const pullResult = await this.pull();
+      if (!pullResult.success && pullResult.error === 'conflict') {
+        console.error('Cannot push: unresolved conflicts');
+        return { success: false, error: 'conflict' };
+      }
+
       // Stage all changes
       await this.git.add('.');
 
@@ -72,18 +90,32 @@ export class SyncEngine {
 
       console.log(`Committed: ${commitMessage}`);
 
-      // Push to remote
-      try {
-        await this.git.push();
-        console.log('Pushed to remote');
-        return { success: true, committed: true, message: commitMessage };
-      } catch (error) {
-        if (error.message.includes('no upstream')) {
-          console.warn('No remote configured, skipping push');
-          return { success: true, committed: true, message: commitMessage, pushed: false };
+      // Push to remote with retry
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          await this.git.push();
+          console.log('Pushed to remote');
+          return { success: true, committed: true, message: commitMessage };
+        } catch (error) {
+          if (error.message.includes('no upstream')) {
+            console.warn('No remote configured, skipping push');
+            return { success: true, committed: true, message: commitMessage, pushed: false };
+          }
+
+          if (error.message.includes('rejected') && retries > 1) {
+            // Remote has new commits, pull and retry
+            console.log('Push rejected, pulling and retrying...');
+            await this.pull();
+            retries--;
+            continue;
+          }
+
+          throw error;
         }
-        throw error;
       }
+
+      return { success: false, error: 'Failed to push after retries' };
     } catch (error) {
       console.error('Error pushing changes:', error.message);
       return { success: false, error: error.message };

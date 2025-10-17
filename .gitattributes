@@ -1,0 +1,5 @@
+# Handle state file with union merge strategy
+.sync-state.json merge=union
+
+# Handle lock files
+.sync-locks/*.lock merge=union

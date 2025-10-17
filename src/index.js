@@ -16,8 +16,8 @@ export class SyncWorkClaude {
     this.heartbeatInterval = config.heartbeatInterval || 10000; // 10 seconds
 
     this.stateManager = new StateManager(this.projectRoot, this.agentId);
-    this.lockManager = new LockManager(this.projectRoot, this.agentId);
     this.syncEngine = new SyncEngine(this.projectRoot, this.agentId);
+    this.lockManager = new LockManager(this.projectRoot, this.agentId, this.syncEngine);
     this.taskQueue = new TaskQueue(this.stateManager);
 
     this.running = false;
@@ -30,6 +30,7 @@ export class SyncWorkClaude {
 
     await this.syncEngine.initialize();
     await this.stateManager.initialize();
+    await this.lockManager.initialize();
 
     console.log('Initialization complete');
   }

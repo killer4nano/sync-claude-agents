@@ -11,18 +11,30 @@ export class TaskQueue {
   }
 
   async getNextTask() {
-    const task = await this.stateManager.getAvailableTask();
+    // Try up to 3 times to get a task (in case of race conditions)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const task = await this.stateManager.getAvailableTask();
 
-    if (task) {
+      if (!task) {
+        return null; // No tasks available
+      }
+
       try {
         await this.stateManager.assignTask(task.id);
         return task;
       } catch (error) {
-        console.error('Error assigning task:', error.message);
-        return null;
+        if (error.message.includes('already assigned')) {
+          console.log(`Task ${task.id} was taken by another agent, trying next task...`);
+          // Try to get another task
+          continue;
+        } else {
+          console.error('Error assigning task:', error.message);
+          return null;
+        }
       }
     }
 
+    console.log('No available tasks after 3 attempts');
     return null;
   }
 

@@ -134,7 +134,10 @@ export class StateManager {
   }
 
   async assignTask(taskId) {
+    // Use optimistic locking: read, modify, save, then verify
     const state = await this.getState();
+    const initialVersion = state.version;
+
     const task = state.tasks.find(t => t.id === taskId);
 
     if (!task) {
@@ -150,6 +153,19 @@ export class StateManager {
     task.startedAt = new Date().toISOString();
 
     await this.saveState(state);
+
+    // Verify assignment by re-reading state after a short delay
+    // This allows the other agent's changes to sync if they also grabbed the task
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const verifiedState = await this.getState();
+    const verifiedTask = verifiedState.tasks.find(t => t.id === taskId);
+
+    if (verifiedTask.assignedTo !== this.agentId) {
+      // Another agent grabbed it first
+      throw new Error(`Task ${taskId} was assigned to ${verifiedTask.assignedTo} by another agent`);
+    }
+
     await this.updateAgentStatus('working', taskId);
 
     return task;
