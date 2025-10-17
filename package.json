@@ -1,0 +1,18 @@
+{
+  "name": "sync-work-claude",
+  "version": "1.0.0",
+  "description": "A collaboration system for two Claude agents working together across different computers",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "sync": "node src/sync.js"
+  },
+  "keywords": ["claude", "collaboration", "sync", "multi-agent"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "simple-git": "^3.22.0",
+    "chokidar": "^3.5.3"
+  }
+}
