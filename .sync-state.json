@@ -1,0 +1,26 @@
+{
+  "agents": {
+    "agent-1": {
+      "status": "idle",
+      "currentTask": null,
+      "lastSeen": "2025-10-17T05:28:55.243Z"
+    },
+    "agent-2": {
+      "status": "idle",
+      "currentTask": null,
+      "lastSeen": "2025-10-17T05:28:55.243Z"
+    }
+  },
+  "tasks": [
+    {
+      "id": "task-1760678935245",
+      "description": "Test task",
+      "status": "pending",
+      "assignedTo": null,
+      "createdAt": "2025-10-17T05:28:55.245Z",
+      "test": true
+    }
+  ],
+  "locks": [],
+  "version": 2
+}
