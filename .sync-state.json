@@ -9,18 +9,28 @@
       "status": "idle",
       "currentTask": null,
       "lastSeen": "2025-10-17T05:28:55.243Z"
+    },
+    "test-agent": {
+      "status": "idle",
+      "currentTask": null,
+      "lastSeen": "2025-10-17T05:28:55.412Z"
     }
   },
   "tasks": [
     {
       "id": "task-1760678935245",
       "description": "Test task",
-      "status": "pending",
-      "assignedTo": null,
+      "status": "completed",
+      "assignedTo": "test-agent",
       "createdAt": "2025-10-17T05:28:55.245Z",
-      "test": true
+      "test": true,
+      "startedAt": "2025-10-17T05:28:55.410Z",
+      "completedAt": "2025-10-17T05:28:55.412Z",
+      "result": {
+        "test": "success"
+      }
     }
   ],
   "locks": [],
-  "version": 2
+  "version": 6
 }
