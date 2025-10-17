@@ -3,7 +3,7 @@
     "agent-1": {
       "status": "idle",
       "currentTask": null,
-      "lastSeen": "2025-10-17T06:00:49.079Z"
+      "lastSeen": "2025-10-17T06:01:19.100Z"
     },
     "agent-2": {
       "status": "idle",
@@ -11,7 +11,15 @@
       "lastSeen": "2025-10-17T05:55:18.372Z"
     }
   },
-  "tasks": [],
+  "tasks": [
+    {
+      "id": "task-1760680879796",
+      "description": "CONNECTION TEST: Agent-2 please respond when you see this",
+      "status": "pending",
+      "assignedTo": null,
+      "createdAt": "2025-10-17T06:01:19.796Z"
+    }
+  ],
   "locks": [],
-  "version": 34
+  "version": 38
 }
