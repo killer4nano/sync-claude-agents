@@ -3,7 +3,7 @@
     "agent-1": {
       "status": "idle",
       "currentTask": null,
-      "lastSeen": "2025-10-17T05:56:48.905Z"
+      "lastSeen": "2025-10-17T05:57:18.939Z"
     },
     "agent-2": {
       "status": "idle",
@@ -13,5 +13,5 @@
   },
   "tasks": [],
   "locks": [],
-  "version": 10
+  "version": 13
 }
