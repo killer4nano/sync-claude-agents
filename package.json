@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node src/index.js start",
     "sync": "node src/sync.js"
   },
   "keywords": ["claude", "collaboration", "sync", "multi-agent"],
